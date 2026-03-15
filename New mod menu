@@ -1,0 +1,149 @@
+-- Salim Hack
+local modMenu = {}
+
+-- Aimbot
+modMenu.aimbot = {}
+modMenu.aimbot.enabled = false
+modMenu.aimbot.fov = 100
+modMenu.aimbot.smoothness = 10
+
+-- FOV
+modMenu.fov = {}
+modMenu.fov.enabled = false
+modMenu.fov.value = 120
+
+-- ESP
+modMenu.esp = {}
+modMenu.esp.enabled = false
+modMenu.esp.color = Color3.new(1, 0, 0)
+
+-- Ligne
+modMenu.ligne = {}
+modMenu.ligne.enabled = false
+modMenu.ligne.color = Color3.new(1, 0, 0)
+
+-- Skeleton
+modMenu.skeleton = {}
+modMenu.skeleton.enabled = false
+modMenu.skeleton.color = Color3.new(1, 0, 0)
+
+-- Fly
+modMenu.fly = {}
+modMenu.fly.enabled = false
+modMenu.fly.speed = 50
+
+-- Nom
+modMenu.nom = {}
+modMenu.nom.enabled = false
+modMenu.nom.text = "Salim Hack"
+
+-- Créer un nouveau GUI
+local gui = Instance.new("ScreenGui")
+gui.Parent = game.Players.LocalPlayer.PlayerGui
+
+-- Créer un frame pour le menu
+local menuFrame = Instance.new("Frame")
+menuFrame.Parent = gui
+menuFrame.Size = UDim2.new(0.2, 0, 0.4, 0)
+menuFrame.Position = UDim2.new(0.8, 0, 0.3, 0)
+menuFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+menuFrame.BackgroundTransparency = 0.5
+
+-- Créer des boutons pour les fonctionnalités
+local aimbotButton = Instance.new("TextButton")
+aimbotButton.Parent = menuFrame
+aimbotButton.Size = UDim2.new(1, 0, 0.1, 0)
+aimbotButton.Position = UDim2.new(0, 0, 0, 0)
+aimbotButton.Text = "Aimbot : OFF"
+aimbotButton.MouseButton1Click:Connect(function()
+    modMenu.aimbot.enabled = not modMenu.aimbot.enabled
+    if modMenu.aimbot.enabled then
+        aimbotButton.Text = "Aimbot : ON"
+    else
+        aimbotButton.Text = "Aimbot : OFF"
+    end
+end)
+
+local fovButton = Instance.new("TextButton")
+fovButton.Parent = menuFrame
+fovButton.Size = UDim2.new(1, 0, 0.1, 0)
+fovButton.Position = UDim2.new(0, 0, 0.1, 0)
+fovButton.Text = "FOV : OFF"
+fovButton.MouseButton1Click:Connect(function()
+    modMenu.fov.enabled = not modMenu.fov.enabled
+    if modMenu.fov.enabled then
+        fovButton.Text = "FOV : ON"
+    else
+        fovButton.Text = "FOV : OFF"
+    end
+end)
+
+local espButton = Instance.new("TextButton")
+espButton.Parent = menuFrame
+espButton.Size = UDim2.new(1, 0, 0.1, 0)
+espButton.Position = UDim2.new(0, 0, 0.2, 0)
+espButton.Text = "ESP : OFF"
+espButton.MouseButton1Click:Connect(function()
+    modMenu.esp.enabled = not modMenu.esp.enabled
+    if modMenu.esp.enabled then
+        espButton.Text = "ESP : ON"
+    else
+        espButton.Text = "ESP : OFF"
+    end
+end)
+
+local ligneButton = Instance.new("TextButton")
+ligneButton.Parent = menuFrame
+ligneButton.Size = UDim2.new(1, 0, 0.1, 0)
+ligneButton.Position = UDim2.new(0, 0, 0.3, 0)
+ligneButton.Text = "Ligne : OFF"
+ligneButton.MouseButton1Click:Connect(function()
+    modMenu.ligne.enabled = not modMenu.ligne.enabled
+    if modMenu.ligne.enabled then
+        ligneButton.Text = "Ligne : ON"
+    else
+        ligneButton.Text = "Ligne : OFF"
+    end
+end)
+
+local skeletonButton = Instance.new("TextButton")
+skeletonButton.Parent = menuFrame
+skeletonButton.Size = UDim2.new(1, 0, 0.1, 0)
+skeletonButton.Position = UDim2.new(0, 0, 0.4, 0)
+skeletonButton.Text = "Skeleton : OFF"
+skeletonButton.MouseButton1Click:Connect(function()
+    modMenu.skeleton.enabled = not modMenu.skeleton.enabled
+    if modMenu.skeleton.enabled then
+        skeletonButton.Text = "Skeleton : ON"
+    else
+        skeletonButton.Text = "Skeleton : OFF"
+    end
+end)
+
+local flyButton = Instance.new("TextButton")
+flyButton.Parent = menuFrame
+flyButton.Size = UDim2.new(1, 0, 0.1, 0)
+flyButton.Position = UDim2.new(0, 0, 0.5, 0)
+flyButton.Text = "Fly : OFF"
+flyButton.MouseButton1Click:Connect(function()
+    modMenu.fly.enabled = not modMenu.fly.enabled
+    if modMenu.fly.enabled then
+        flyButton.Text = "Fly : ON"
+    else
+        flyButton.Text = "Fly : OFF"
+    end
+end)
+
+local nomButton = Instance.new("TextButton")
+nomButton.Parent = menuFrame
+nomButton.Size = UDim2.new(1, 0, 0.1, 0)
+nomButton.Position = UDim2.new(0, 0, 0.6, 0)
+nomButton.Text = "Nom : OFF"
+nomButton.MouseButton1Click:Connect(function()
+    modMenu.nom.enabled = not modMenu.nom.enabled
+    if modMenu.nom.enabled then
+        nomButton.Text = "Nom : ON"
+    else
+        nomButton.Text = "Nom : OFF"
+    end
+end)
