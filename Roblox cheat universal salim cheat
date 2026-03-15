@@ -1,0 +1,119 @@
+-- Création de la fenêtre
+local gui = Instance.new("ScreenGui")
+gui.Name = "Salim cHeAt 2.0"
+gui.Parent = game.Players.LocalPlayer.PlayerGui
+
+local frame = Instance.new("Frame")
+frame.Name = "Menu"
+frame.Size = UDim2.new(0.2, 0, 0.3, 0)
+frame.Position = UDim2.new(0.8, 0, 0.2, 0)
+frame.BackgroundColor3 = Color3.new(0, 0, 0)
+frame.BorderSizePixel = 1
+frame.BorderColor3 = Color3.new(1, 1, 1)
+frame.Parent = gui
+
+local title = Instance.new("TextLabel")
+title.Name = "Titre"
+title.Text = "Salim cHeAt"
+title.Size = UDim2.new(1, 0, 0.2, 0)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundColor3 = Color3.new(0, 0, 0)
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Parent = frame
+
+local croix = Instance.new("TextButton")
+croix.Name = "Croix"
+croix.Text = "X"
+croix.Size = UDim2.new(0.1, 0, 0.1, 0)
+croix.Position = UDim2.new(0.9, 0, 0, 0)
+croix.BackgroundColor3 = Color3.new(1, 0, 0)
+croix.TextColor3 = Color3.new(1, 1, 1)
+croix.Parent = frame
+
+local aimbotButton = Instance.new("TextButton")
+aimbotButton.Name = "Aimbot"
+aimbotButton.Text = "Aimbot : OFF"
+aimbotButton.Size = UDim2.new(1, 0, 0.2, 0)
+aimbotButton.Position = UDim2.new(0, 0, 0.2, 0)
+aimbotButton.BackgroundColor3 = Color3.new(0, 0, 0)
+aimbotButton.TextColor3 = Color3.new(1, 1, 1)
+aimbotButton.Parent = frame
+
+local espButton = Instance.new("TextButton")
+espButton.Name = "ESP"
+espButton.Text = "ESP : OFF"
+espButton.Size = UDim2.new(1, 0, 0.2, 0)
+espButton.Position = UDim2.new(0, 0, 0.4, 0)
+espButton.BackgroundColor3 = Color3.new(0, 0, 0)
+espButton.TextColor3 = Color3.new(1, 1, 1)
+espButton.Parent = frame
+
+local fovLabel = Instance.new("TextLabel")
+fovLabel.Name = "FOV"
+fovLabel.Text = "FOV : 100"
+fovLabel.Size = UDim2.new(1, 0, 0.1, 0)
+fovLabel.Position = UDim2.new(0, 0, 0.6, 0)
+fovLabel.BackgroundColor3 = Color3.new(0, 0, 0)
+fovLabel.TextColor3 = Color3.new(1, 1, 1)
+fovLabel.Parent = frame
+
+local fovInput = Instance.new("TextBox")
+fovInput.Name = "FOV Input"
+fovInput.Size = UDim2.new(1, 0, 0.1, 0)
+fovInput.Position = UDim2.new(0, 0, 0.7, 0)
+fovInput.BackgroundColor3 = Color3.new(0, 0, 0)
+fovInput.TextColor3 = Color3.new(1, 1, 1)
+fovInput.Parent = frame
+
+-- Configuration
+local aimbot = {
+    enabled = false,
+    fov = 100,
+    target = nil
+}
+
+local esp = {
+    enabled = false
+}
+
+-- Fonctions
+local function toggleAimbot()
+    aimbot.enabled = not aimbot.enabled
+    aimbotButton.Text = "Aimbot : " .. (aimbot.enabled and "ON" or "OFF")
+end
+
+local function toggleESP()
+    esp.enabled = not esp.enabled
+    espButton.Text = "ESP : " .. (esp.enabled and "ON" or "OFF")
+end
+
+local function setFOV(newFOV)
+    aimbot.fov = newFOV
+    fovLabel.Text = "FOV : " .. newFOV
+end
+
+-- Événements
+croix.MouseButton1Click:Connect(function()
+    frame.Visible = false
+end)
+
+aimbotButton.MouseButton1Click:Connect(toggleAimbot)
+espButton.MouseButton1Click:Connect(toggleESP)
+
+fovInput.FocusLost:Connect(function()
+    local newFOV = tonumber(fovInput.Text)
+    if newFOV then
+        setFOV(newFOV)
+    end
+end)
+
+-- Boucle principale
+while true do
+    if aimbot.enabled then
+        -- Code pour l'aimbot
+    end
+    if esp.enabled then
+        -- Code pour l'ESP
+    end
+    wait(0.01)
+end
