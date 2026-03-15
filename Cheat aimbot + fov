@@ -1,0 +1,95 @@
+-- Configuration
+local aimbot = {
+    enabled = false,
+    fov = 100,
+    smoothness = 10,
+    target = nil
+}
+
+local esp = {
+    enabled = false,
+    color = Color3.new(1, 0, 0)
+}
+
+-- Fonction pour activer/désactiver l'aimbot
+local function toggleAimbot()
+    aimbot.enabled = not aimbot.enabled
+end
+
+-- Fonction pour changer le FOV
+local function setFOV(newFOV)
+    aimbot.fov = newFOV
+end
+
+-- Fonction pour activer/désactiver l'ESP
+local function toggleESP()
+    esp.enabled = not esp.enabled
+end
+
+-- Fonction pour dessiner l'ESP
+local function drawESP()
+    if esp.enabled then
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer then
+                local character = player.Character
+                if character then
+                    local head = character:FindFirstChild("Head")
+                    if head then
+                        local screenPosition = game.Workspace.CurrentCamera:WorldToScreenPoint(head.Position)
+                        if screenPosition then
+                            local espLine = Drawing.new("Line")
+                            espLine.Color = esp.color
+                            espLine.Thickness = 1
+                            espLine.From = Vector2.new(screenPosition.X, screenPosition.Y)
+                            espLine.To = Vector2.new(game.Players.LocalPlayer.Character.Head.Position.X, game.Players.LocalPlayer.Character.Head.Position.Y)
+                            espLine.Visible = true
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Fonction pour l'aimbot
+local function aimbotLoop()
+    if aimbot.enabled then
+        local closestPlayer = nil
+        local closestDistance = math.huge
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer then
+                local character = player.Character
+                if character then
+                    local head = character:FindFirstChild("Head")
+                    if head then
+                        local screenPosition = game.Workspace.CurrentCamera:WorldToScreenPoint(head.Position)
+                        if screenPosition then
+                            local distance = (Vector2.new(screenPosition.X, screenPosition.Y) - Vector2.new(game.Players.LocalPlayer.Character.Head.Position.X, game.Players.LocalPlayer.Character.Head.Position.Y)).Magnitude
+                            if distance < aimbot.fov and distance < closestDistance then
+                                closestPlayer = player
+                                closestDistance = distance
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        if closestPlayer then
+            aimbot.target = closestPlayer
+            local character = closestPlayer.Character
+            if character then
+                local head = character:FindFirstChild("Head")
+                if head then
+                    game.Workspace.CurrentCamera.CFrame = CFrame.new(game.Workspace.CurrentCamera.CFrame.Position, head.Position)
+                end
+            end
+        end
+    end
+end
+
+-- Boucle principale
+while true do
+    drawESP()
+    aimbotLoop()
+    wait(0.01)
+end
