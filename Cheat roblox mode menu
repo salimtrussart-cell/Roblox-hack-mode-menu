@@ -1,0 +1,76 @@
+-- Salim Hack
+local modMenu = {}
+
+-- Aimbot
+modMenu.aimbot = {}
+modMenu.aimbot.enabled = false
+modMenu.aimbot.fov = 100
+modMenu.aimbot.smoothness = 10
+
+-- FOV
+modMenu.fov = {}
+modMenu.fov.enabled = false
+modMenu.fov.value = 120
+
+-- ESP
+modMenu.esp = {}
+modMenu.esp.enabled = false
+modMenu.esp.color = Color3.new(1, 0, 0)
+
+-- Ligne
+modMenu.ligne = {}
+modMenu.ligne.enabled = false
+modMenu.ligne.color = Color3.new(1, 0, 0)
+
+-- Skeleton
+modMenu.skeleton = {}
+modMenu.skeleton.enabled = false
+modMenu.skeleton.color = Color3.new(1, 0, 0)
+
+-- Fly
+modMenu.fly = {}
+modMenu.fly.enabled = false
+modMenu.fly.speed = 50
+
+-- Nom
+modMenu.nom = {}
+modMenu.nom.enabled = false
+modMenu.nom.text = "Salim Hack"
+
+-- Fonction pour activer/désactiver les fonctionnalités
+function modMenu:toggle(feature)
+    if feature == "aimbot" then
+        modMenu.aimbot.enabled = not modMenu.aimbot.enabled
+    elseif feature == "fov" then
+        modMenu.fov.enabled = not modMenu.fov.enabled
+    elseif feature == "esp" then
+        modMenu.esp.enabled = not modMenu.esp.enabled
+    elseif feature == "ligne" then
+        modMenu.ligne.enabled = not modMenu.ligne.enabled
+    elseif feature == "skeleton" then
+        modMenu.skeleton.enabled = not modMenu.skeleton.enabled
+    elseif feature == "fly" then
+        modMenu.fly.enabled = not modMenu.fly.enabled
+    elseif feature == "nom" then
+        modMenu.nom.enabled = not modMenu.nom.enabled
+    end
+end
+
+-- Fonction pour mettre à jour les fonctionnalités
+function modMenu:update()
+    if modMenu.aimbot.enabled then
+        -- Code pour l'aimbot
+    end
+    if modMenu.fov.enabled then
+        -- Code pour le FOV
+    end
+    if modMenu.esp.enabled then
+        -- Code pour l'ESP
+    end
+    if modMenu.ligne.enabled then
+        -- Code pour la ligne
+    end
+    if modMenu.skeleton.enabled then
+        -- Code pour le skeleton
+    end
+    if modMenu
