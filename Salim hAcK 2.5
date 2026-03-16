@@ -1,0 +1,124 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- CONFIG
+local aimAssist = false
+local showFOV = true
+local FOV = 120
+local aimStrength = 1
+
+-- GUI
+local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,200,0,180)
+frame.Position = UDim2.new(0.75,0,0.25,0)
+frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,30)
+title.Text = "Aim Menu"
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundTransparency = 1
+
+-- Aim Assist Button
+local aimButton = Instance.new("TextButton", frame)
+aimButton.Size = UDim2.new(1,0,0,30)
+aimButton.Position = UDim2.new(0,0,0.25,0)
+aimButton.Text = "Aim Assist : OFF"
+
+-- FOV Button
+local fovButton = Instance.new("TextButton", frame)
+fovButton.Size = UDim2.new(1,0,0,30)
+fovButton.Position = UDim2.new(0,0,0.45,0)
+fovButton.Text = "FOV Visible : ON"
+
+-- FOV input
+local fovBox = Instance.new("TextBox", frame)
+fovBox.Size = UDim2.new(1,0,0,30)
+fovBox.Position = UDim2.new(0,0,0.65,0)
+fovBox.PlaceholderText = "Enter FOV"
+
+-- Cercle FOV
+local circle = Instance.new("Frame", gui)
+circle.AnchorPoint = Vector2.new(0.5,0.5)
+circle.Position = UDim2.new(0.5,0,0.5,0)
+circle.Size = UDim2.new(0,FOV,0,FOV)
+circle.BackgroundTransparency = 1
+circle.BorderSizePixel = 2
+circle.BorderColor3 = Color3.fromRGB(255,255,255)
+
+-- Boutons
+
+aimButton.MouseButton1Click:Connect(function()
+	aimAssist = not aimAssist
+	aimButton.Text = "Aim Assist : "..(aimAssist and "ON" or "OFF")
+end)
+
+fovButton.MouseButton1Click:Connect(function()
+	showFOV = not showFOV
+	fovButton.Text = "FOV Visible : "..(showFOV and "ON" or "OFF")
+	circle.Visible = showFOV
+end)
+
+fovBox.FocusLost:Connect(function()
+	local num = tonumber(fovBox.Text)
+	if num then
+		FOV = num
+		circle.Size = UDim2.new(0,FOV,0,FOV)
+	end
+end)
+
+-- Trouver cible
+
+local function getClosestPlayer()
+
+	local closest = nil
+	local shortest = FOV
+
+	for _,player in pairs(Players:GetPlayers()) do
+
+		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+
+			local pos,visible = Camera:WorldToViewportPoint(player.Character.Head.Position)
+
+			if visible then
+
+				local dist = (Vector2.new(pos.X,pos.Y) -
+				Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)).Magnitude
+
+				if dist < shortest then
+					shortest = dist
+					closest = player
+				end
+
+			end
+		end
+	end
+
+	return closest
+end
+
+-- Aim assist
+
+RunService.RenderStepped:Connect(function()
+
+	if aimAssist then
+
+		local target = getClosestPlayer()
+
+		if target and target.Character and target.Character:FindFirstChild("Head") then
+
+			local targetPos = target.Character.Head.Position
+
+			local newCFrame = CFrame.new(Camera.CFrame.Position,targetPos)
+
+			Camera.CFrame = Camera.CFrame:Lerp(newCFrame,aimStrength)
+
+		end
+	end
+
+end)
