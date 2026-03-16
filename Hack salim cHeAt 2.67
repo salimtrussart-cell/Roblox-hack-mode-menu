@@ -1,0 +1,448 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- CONFIG
+local aimAssist = false
+local showFOV = true
+local espEnabled = false
+local tracersEnabled = false
+local FOV = 120
+local aimStrength = 1 -- MODIFIÉ : Puissance maximale (aimbot)
+
+-- Stockage ESP
+local espObjects = {}
+local tracerLines = {}
+
+-- GUI
+local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+gui.Name = "AimMenu"
+gui.ResetOnSpawn = false
+
+-- Barre de titre (toujours visible)
+local titleBar = Instance.new("TextButton", gui)
+titleBar.Size = UDim2.new(0, 200, 0, 30)
+titleBar.Position = UDim2.new(0.75, 0, 0.22, 0)
+titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+titleBar.BackgroundTransparency = 0.3
+titleBar.Text = "Salim Cheat 2.67"
+titleBar.TextColor3 = Color3.fromRGB(255, 100, 100)
+titleBar.Font = Enum.Font.GothamBold
+titleBar.TextSize = 14
+titleBar.BorderSizePixel = 0
+titleBar.AutoButtonColor = false
+
+local titleCorner = Instance.new("UICorner", titleBar)
+titleCorner.CornerRadius = UDim.new(0, 8)
+
+-- Frame principal
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 200, 0, 260)
+frame.Position = UDim2.new(0.75, 0, 0.25, 0)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.Visible = true
+
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0, 8)
+
+-- Titre du menu
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Text = "Aim Menu"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+
+-- Fonction pour créer un bouton
+local function createButton(parent, posY, text)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(0.9, 0, 0, 28)
+    btn.Position = UDim2.new(0.05, 0, 0, posY)
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 12
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    return btn
+end
+
+-- Boutons
+local aimButton = createButton(frame, 35, "Aim Assist : OFF")
+local fovButton = createButton(frame, 68, "FOV Visible : ON")
+local espButton = createButton(frame, 101, "ESP : OFF")
+local tracerButton = createButton(frame, 134, "Tracers : OFF")
+
+-- FOV input
+local fovBox = Instance.new("TextBox", frame)
+fovBox.Size = UDim2.new(0.9, 0, 0, 28)
+fovBox.Position = UDim2.new(0.05, 0, 0, 167)
+fovBox.PlaceholderText = "FOV: " .. FOV
+fovBox.Text = ""
+fovBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+fovBox.TextColor3 = Color3.new(1, 1, 1)
+fovBox.Font = Enum.Font.Gotham
+fovBox.TextSize = 12
+Instance.new("UICorner", fovBox).CornerRadius = UDim.new(0, 6)
+
+-- Strength label
+local strengthLabel = Instance.new("TextLabel", frame)
+strengthLabel.Size = UDim2.new(0.9, 0, 0, 20)
+strengthLabel.Position = UDim2.new(0.05, 0, 0, 200)
+strengthLabel.Text = "Strength: " .. aimStrength
+strengthLabel.TextColor3 = Color3.new(1, 1, 1)
+strengthLabel.BackgroundTransparency = 1
+strengthLabel.Font = Enum.Font.Gotham
+strengthLabel.TextSize = 12
+
+-- Instructions
+local infoLabel = Instance.new("TextLabel", frame)
+infoLabel.Size = UDim2.new(0.9, 0, 0, 20)
+infoLabel.Position = UDim2.new(0.05, 0, 0, 225)
+infoLabel.Text = "Clic sur la barre pour cacher"
+infoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+infoLabel.BackgroundTransparency = 1
+infoLabel.Font = Enum.Font.Gotham
+infoLabel.TextSize = 10
+
+-- Cercle FOV
+local circle = Instance.new("Frame", gui)
+circle.Name = "FOVCircle"
+circle.AnchorPoint = Vector2.new(0.5, 0.5)
+circle.Position = UDim2.new(0.5, 0, 0.5, 0)
+circle.Size = UDim2.new(0, FOV * 2, 0, FOV * 2)
+circle.BackgroundTransparency = 1
+
+local circleInner = Instance.new("Frame", circle)
+circleInner.Size = UDim2.new(1, 0, 1, 0)
+circleInner.BackgroundTransparency = 0.85
+circleInner.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+circleInner.BorderSizePixel = 0
+
+local circleCorner = Instance.new("UICorner", circleInner)
+circleCorner.CornerRadius = UDim.new(0.5, 0)
+
+local circleStroke = Instance.new("UIStroke", circleInner)
+circleStroke.Color = Color3.fromRGB(255, 0, 0)
+circleStroke.Thickness = 2
+circleStroke.Transparency = 0.3
+
+-- Point central
+local centerDot = Instance.new("Frame", gui)
+centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
+centerDot.Position = UDim2.new(0.5, 0, 0.5, 0)
+centerDot.Size = UDim2.new(0, 4, 0, 4)
+centerDot.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+Instance.new("UICorner", centerDot).CornerRadius = UDim.new(0.5, 0)
+
+-- DRAG SYSTEM
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = titleBar.Position
+    end
+end)
+
+titleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        local newPos = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X, 
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+        titleBar.Position = newPos
+        frame.Position = UDim2.new(
+            newPos.X.Scale, 
+            newPos.X.Offset, 
+            newPos.Y.Scale, 
+            newPos.Y.Offset + 30
+        )
+    end
+end)
+
+-- Toggle menu visibility
+titleBar.MouseButton1Click:Connect(function()
+    if not dragging then
+        frame.Visible = not frame.Visible
+    end
+end)
+
+-- ESP FUNCTIONS
+local function createESP(player)
+    if player == LocalPlayer then return end
+    
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    
+    local nameTag = Instance.new("BillboardGui")
+    nameTag.Size = UDim2.new(0, 100, 0, 40)
+    nameTag.StudsOffset = Vector3.new(0, 3, 0)
+    nameTag.AlwaysOnTop = true
+    
+    local nameLabel = Instance.new("TextLabel", nameTag)
+    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 14
+    nameLabel.Text = player.Name
+    
+    local healthLabel = Instance.new("TextLabel", nameTag)
+    healthLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    healthLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    healthLabel.TextStrokeTransparency = 0.5
+    healthLabel.Font = Enum.Font.Gotham
+    healthLabel.TextSize = 12
+    
+    espObjects[player] = {
+        highlight = highlight,
+        nameTag = nameTag,
+        healthLabel = healthLabel
+    }
+    
+    local function updateESP()
+        if player.Character and espEnabled then
+            highlight.Parent = player.Character
+            nameTag.Parent = player.Character:FindFirstChild("Head")
+            
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                local health = math.floor(humanoid.Health)
+                local maxHealth = humanoid.MaxHealth
+                healthLabel.Text = health .. "/" .. maxHealth
+                
+                local ratio = health / maxHealth
+                healthLabel.TextColor3 = Color3.fromRGB(255 * (1 - ratio), 255 * ratio, 0)
+            end
+        else
+            highlight.Parent = nil
+            nameTag.Parent = nil
+        end
+    end
+    
+    player.CharacterAdded:Connect(function()
+        wait(0.5)
+        updateESP()
+    end)
+    
+    updateESP()
+end
+
+local function removeESP(player)
+    if espObjects[player] then
+        espObjects[player].highlight:Destroy()
+        espObjects[player].nameTag:Destroy()
+        espObjects[player] = nil
+    end
+end
+
+-- TRACER FUNCTIONS
+local function createTracer(player)
+    if player == LocalPlayer then return end
+    
+    local line = Drawing.new("Line")
+    line.Visible = false
+    line.Color = Color3.fromRGB(255, 0, 0)
+    line.Thickness = 1
+    line.Transparency = 1
+    
+    tracerLines[player] = line
+end
+
+local function removeTracer(player)
+    if tracerLines[player] then
+        tracerLines[player]:Remove()
+        tracerLines[player] = nil
+    end
+end
+
+-- Initialize ESP/Tracers for existing players
+for _, player in pairs(Players:GetPlayers()) do
+    createESP(player)
+    createTracer(player)
+end
+
+Players.PlayerAdded:Connect(function(player)
+    createESP(player)
+    createTracer(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player)
+    removeTracer(player)
+end)
+
+-- BUTTON EVENTS
+aimButton.MouseButton1Click:Connect(function()
+    aimAssist = not aimAssist
+    aimButton.Text = "Aim Assist : " .. (aimAssist and "ON" or "OFF")
+    aimButton.BackgroundColor3 = aimAssist and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+end)
+
+fovButton.MouseButton1Click:Connect(function()
+    showFOV = not showFOV
+    fovButton.Text = "FOV Visible : " .. (showFOV and "ON" or "OFF")
+    circle.Visible = showFOV
+    centerDot.Visible = showFOV
+    fovButton.BackgroundColor3 = showFOV and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+end)
+
+espButton.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    espButton.Text = "ESP : " .. (espEnabled and "ON" or "OFF")
+    espButton.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and espObjects[player] then
+            if espEnabled and player.Character then
+                espObjects[player].highlight.Parent = player.Character
+                espObjects[player].nameTag.Parent = player.Character:FindFirstChild("Head")
+            else
+                espObjects[player].highlight.Parent = nil
+                espObjects[player].nameTag.Parent = nil
+            end
+        end
+    end
+end)
+
+tracerButton.MouseButton1Click:Connect(function()
+    tracersEnabled = not tracersEnabled
+    tracerButton.Text = "Tracers : " .. (tracersEnabled and "ON" or "OFF")
+    tracerButton.BackgroundColor3 = tracersEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+    
+    if not tracersEnabled then
+        for _, line in pairs(tracerLines) do
+            line.Visible = false
+        end
+    end
+end)
+
+fovBox.FocusLost:Connect(function()
+    local num = tonumber(fovBox.Text)
+    if num and num > 0 and num <= 500 then
+        FOV = num
+        circle.Size = UDim2.new(0, FOV * 2, 0, FOV * 2)
+        fovBox.PlaceholderText = "FOV: " .. FOV
+    end
+    fovBox.Text = ""
+end)
+
+-- Get closest player
+local function getClosestPlayer()
+    local closest = nil
+    local shortest = FOV
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local head = player.Character:FindFirstChild("Head")
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+            
+            if head and humanoid and humanoid.Health > 0 then
+                local pos, visible = Camera:WorldToViewportPoint(head.Position)
+
+                if visible then
+                    local screenPos = Vector2.new(pos.X, pos.Y)
+                    local dist = (screenPos - screenCenter).Magnitude
+
+                    if dist < shortest then
+                        shortest = dist
+                        closest = player
+                    end
+                end
+            end
+        end
+    end
+
+    return closest, shortest
+end
+
+-- MAIN LOOP
+RunService.RenderStepped:Connect(function()
+    -- Aim Assist (maintenant en mode aimbot)
+    if aimAssist then
+        local target, distance = getClosestPlayer()
+
+        if target and target.Character then
+            local head = target.Character:FindFirstChild("Head")
+            
+            if head then
+                local targetPos = head.Position
+                local currentPos = Camera.CFrame.Position
+                local newCFrame = CFrame.new(currentPos, targetPos)
+                -- Avec aimStrength = 1, le Lerp verrouille instantanément sur la cible
+                Camera.CFrame = Camera.CFrame:Lerp(newCFrame, aimStrength)
+            end
+        end
+    end
+    
+    -- Update Tracers
+    if tracersEnabled then
+        local screenBottom = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+        
+        for player, line in pairs(tracerLines) do
+            if player.Character then
+                local root = player.Character:FindFirstChild("HumanoidRootPart")
+                local humanoid = player.Character:FindFirstChild("Humanoid")
+                
+                if root and humanoid and humanoid.Health > 0 then
+                    local pos, visible = Camera:WorldToViewportPoint(root.Position)
+                    
+                    if visible then
+                        line.From = screenBottom
+                        line.To = Vector2.new(pos.X, pos.Y)
+                        line.Visible = true
+                    else
+                        line.Visible = false
+                    end
+                else
+                    line.Visible = false
+                end
+            else
+                line.Visible = false
+            end
+        end
+    end
+    
+    -- Update ESP health
+    if espEnabled then
+        for player, esp in pairs(espObjects) do
+            if player.Character then
+                local humanoid = player.Character:FindFirstChild("Humanoid")
+                if humanoid then
+                    local health = math.floor(humanoid.Health)
+                    local maxHealth = humanoid.MaxHealth
+                    esp.healthLabel.Text = health .. "/" .. maxHealth
+                    
+                    local ratio = health / maxHealth
+                    esp.healthLabel.TextColor3 = Color3.fromRGB(255 * (1 - ratio), 255 * ratio, 0)
+                end
+            end
+        end
+    end
+end)
