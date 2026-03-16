@@ -1,0 +1,210 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- CONFIG
+local aimAssist = false
+local showFOV = true
+local FOV = 120
+local aimStrength = 1
+local isMinimized = false
+local espEnabled = false
+
+-- GUI
+local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,200,0,220)
+frame.Position = UDim2.new(0.75,0,0.25,0)
+frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,30)
+title.Text = "Aim Menu"
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundTransparency = 1
+
+-- Aim Assist Button
+local aimButton = Instance.new("TextButton", frame)
+aimButton.Size = UDim2.new(1,0,0,30)
+aimButton.Position = UDim2.new(0,0,0.25,0)
+aimButton.Text = "Aim Assist : OFF"
+
+-- FOV Button
+local fovButton = Instance.new("TextButton", frame)
+fovButton.Size = UDim2.new(1,0,0,30)
+fovButton.Position = UDim2.new(0,0,0.45,0)
+fovButton.Text = "FOV Visible : ON"
+
+-- FOV input
+local fovBox = Instance.new("TextBox", frame)
+fovBox.Size = UDim2.new(1,0,0,30)
+fovBox.Position = UDim2.new(0,0,0.65,0)
+fovBox.PlaceholderText = "Enter FOV"
+
+-- ESP Button
+local espButton = Instance.new("TextButton", frame)
+espButton.Size = UDim2.new(1,0,0,30)
+espButton.Position = UDim2.new(0,0,0.85,0)
+espButton.Text = "ESP : OFF"
+
+-- Cercle FOV
+local circle = Instance.new("Frame", gui)
+circle.AnchorPoint = Vector2.new(0.5,0.5)
+circle.Position = UDim2.new(0.5,0,0.5,0)
+circle.Size = UDim2.new(0,FOV,0,FOV)
+circle.BackgroundTransparency = 1
+circle.BorderSizePixel = 2
+circle.BorderColor3 = Color3.fromRGB(255,255,255)
+
+-- Minimiser/Maximiser
+local minimizeButton = Instance.new("TextButton", frame)
+minimizeButton.Size = UDim2.new(0,30,0,30)
+minimizeButton.Position = UDim2.new(1,-30,0,0)
+minimizeButton.Text = "-"
+
+local cheatBar = Instance.new("Frame", gui)
+cheatBar.Size = UDim2.new(1,0,0,30)
+cheatBar.Position = UDim2.new(0,0,0,0)
+cheatBar.BackgroundColor3 = Color3.fromRGB(128,128,128)
+cheatBar.BackgroundTransparency = 0.5
+cheatBar.ZIndex = 10
+cheatBar.Visible = false
+
+local cheatText = Instance.new("TextLabel", cheatBar)
+cheatText.Size = UDim2.new(1,0,1,0)
+cheatText.Text = "salim cHeAt 2.8"
+cheatText.TextColor3 = Color3.new(1,1,1)
+cheatText.BackgroundTransparency = 1
+cheatText.ZIndex = 10
+
+cheatBar.MouseButton1Click:Connect(function()
+    isMinimized = false
+    frame.Size = UDim2.new(0,200,0,220)
+    aimButton.Visible = true
+    fovButton.Visible = true
+    fovBox.Visible = true
+    espButton.Visible = true
+    minimizeButton.Text = "-"
+    cheatBar.Visible = false
+end)
+
+minimizeButton.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        frame.Size = UDim2.new(0,200,0,30)
+        aimButton.Visible = false
+        fovButton.Visible = false
+        fovBox.Visible = false
+        espButton.Visible = false
+        minimizeButton.Text = "+"
+        cheatBar.Visible = true
+    else
+        frame.Size = UDim2.new(0,200,0,220)
+        aimButton.Visible = true
+        fovButton.Visible = true
+        fovBox.Visible = true
+        espButton.Visible = true
+        minimizeButton.Text = "-"
+        cheatBar.Visible = false
+    end
+end)
+
+-- Boutons
+aimButton.MouseButton1Click:Connect(function()
+    aimAssist = not aimAssist
+    aimButton.Text = "Aim Assist : "..(aimAssist and "ON" or "OFF")
+end)
+
+fovButton.MouseButton1Click:Connect(function()
+    showFOV = not showFOV
+    fovButton.Text = "FOV Visible : "..(showFOV and "ON" or "OFF")
+    circle.Visible = showFOV
+    circle.BorderColor3 = showFOV and Color3.fromRGB(255,0,0) or Color3.fromRGB(255,255,255)
+end)
+
+espButton.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    espButton.Text = "ESP : "..(espEnabled and "ON" or "OFF")
+    if espEnabled then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                createESP(player)
+            end
+        end
+    else
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local esp = player.Character:FindFirstChild("ESP")
+                if esp then
+                    esp:Destroy()
+                end
+            end
+        end
+    end
+end)
+
+fovBox.FocusLost:Connect(function()
+    local num = tonumber(fovBox.Text)
+    if num then
+        FOV = num
+        circle.Size = UDim2.new(0,FOV,0,FOV)
+    end
+end)
+
+-- Fonction pour créer un ESP
+local function createESP(player)
+    local esp = Instance.new("BillboardGui", player.Character)
+    esp.Name = "ESP"
+    esp.AdjectivalFont = "Arial"
+    esp.Size = UDim2.new(0, 100, 0, 50)
+    esp.StudsOffset = Vector3.new(0, 3, 0)
+    esp.AlwaysOnTop = true
+    local espText = Instance.new("TextLabel", esp)
+    espText.Size = UDim2.new(1, 0, 1, 0)
+    espText.Text = player.Name
+    espText.TextColor3 = Color3.new(1, 1, 1)
+    espText.BackgroundTransparency = 1
+end
+
+-- Trouver cible
+local function getClosestPlayer()
+    local closest = nil
+    local shortest = FOV
+    for _,player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local pos,visible = Camera:WorldToViewportPoint(player.Character.Head.Position)
+            if visible then
+                local dist = (Vector2.new(pos.X,pos.Y) - Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)).Magnitude
+                if dist < shortest then
+                    shortest = dist
+                    closest = player
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- Aim assist
+RunService.RenderStepped:Connect(function()
+    if aimAssist then
+        local target = getClosestPlayer()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            local head = target.Character.Head
+            local headPosition = head.CFrame * CFrame.new(0, head.Size.Y / 2, 0)
+            local newCFrame = CFrame.new(Camera.CFrame.Position, headPosition.Position)
+            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, aimStrength)
+        end
+    end
+    if espEnabled then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local esp = player.Character:FindFirstChild("ESP")
+                if not esp then
+                    createESP(player)
+                end
+            end
+        end
+    end
+end)
