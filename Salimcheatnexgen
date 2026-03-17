@@ -1,0 +1,783 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
+
+-- CONFIG
+local aimAssist = false
+local silentAim = false
+local showFOV = true
+local espEnabled = false
+local tracersEnabled = false
+local FOV = 120
+local aimStrength = 1
+local fovLocked = true
+
+local customFovX = nil
+local customFovY = nil
+
+local espObjects = {}
+local tracerLines = {}
+
+-- =====================
+-- GUI
+-- =====================
+local oldGui = game:GetService("CoreGui"):FindFirstChild("AimMenu")
+if oldGui then oldGui:Destroy() end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "AimMenu"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.IgnoreGuiInset = true
+
+local success = pcall(function()
+    gui.Parent = game:GetService("CoreGui")
+end)
+
+if not success then
+    pcall(function()
+        if gethui then
+            gui.Parent = gethui()
+        else
+            gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+        end
+    end)
+end
+
+local function getGameCenter()
+    local guiInset = GuiService:GetGuiInset()
+    local viewportSize = Camera.ViewportSize
+    return viewportSize.X / 2, (viewportSize.Y / 2) + guiInset.Y
+end
+
+-- =====================
+-- CONTAINER (regroupe frame + titleBar pour drag synchronisé)
+-- =====================
+local container = Instance.new("Frame", gui)
+container.Size = UDim2.new(0, 160, 0, 390)
+container.Position = UDim2.new(1, -170, 1, -400)
+container.BackgroundTransparency = 1
+container.BorderSizePixel = 0
+container.ZIndex = 10
+container.Active = true
+
+-- =====================
+-- FRAME PRINCIPAL (dans le container, en haut)
+-- =====================
+local frame = Instance.new("Frame", container)
+frame.Size = UDim2.new(1, 0, 0, 360)
+frame.Position = UDim2.new(0, 0, 0, 0)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BackgroundTransparency = 0.1
+frame.BorderSizePixel = 0
+frame.Visible = true
+frame.ZIndex = 10
+frame.ClipsDescendants = true
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+-- =====================
+-- BARRE DE TITRE (dans le container, en bas)
+-- =====================
+local titleBar = Instance.new("TextButton", container)
+titleBar.Size = UDim2.new(1, 0, 0, 30)
+titleBar.Position = UDim2.new(0, 0, 1, -30)
+titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+titleBar.BackgroundTransparency = 0.3
+titleBar.Text = "▲ Salim Cheat 2.67"
+titleBar.TextColor3 = Color3.fromRGB(255, 100, 100)
+titleBar.Font = Enum.Font.GothamBold
+titleBar.TextSize = 12
+titleBar.BorderSizePixel = 0
+titleBar.AutoButtonColor = false
+titleBar.ZIndex = 12
+
+Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 8)
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 25)
+title.Text = "Aim Menu"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 13
+title.ZIndex = 11
+
+local function createButton(parent, posY, text)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(0.9, 0, 0, 28)
+    btn.Position = UDim2.new(0.05, 0, 0, posY)
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 11
+    btn.ZIndex = 11
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    return btn
+end
+
+local aimButton = createButton(frame, 26, "Aim Assist : OFF")
+local silentAimButton = createButton(frame, 58, "Silent Aim : OFF")
+local fovButton = createButton(frame, 90, "FOV Visible : ON")
+local espButton = createButton(frame, 122, "ESP : OFF")
+local tracerButton = createButton(frame, 154, "Tracers : OFF")
+
+local fovBox = Instance.new("TextBox", frame)
+fovBox.Size = UDim2.new(0.9, 0, 0, 28)
+fovBox.Position = UDim2.new(0.05, 0, 0, 186)
+fovBox.PlaceholderText = "FOV: " .. FOV
+fovBox.Text = ""
+fovBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+fovBox.TextColor3 = Color3.new(1, 1, 1)
+fovBox.Font = Enum.Font.Gotham
+fovBox.TextSize = 11
+fovBox.ZIndex = 11
+Instance.new("UICorner", fovBox).CornerRadius = UDim.new(0, 6)
+
+local moveFovButton = createButton(frame, 218, "🔓 Déplacer FOV")
+moveFovButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+
+local resetFovButton = createButton(frame, 250, "🎯 Reset FOV centre")
+resetFovButton.BackgroundColor3 = Color3.fromRGB(80, 50, 50)
+
+local strengthLabel = Instance.new("TextLabel", frame)
+strengthLabel.Size = UDim2.new(0.9, 0, 0, 18)
+strengthLabel.Position = UDim2.new(0.05, 0, 0, 282)
+strengthLabel.Text = "Strength: " .. aimStrength
+strengthLabel.TextColor3 = Color3.new(1, 1, 1)
+strengthLabel.BackgroundTransparency = 1
+strengthLabel.Font = Enum.Font.Gotham
+strengthLabel.TextSize = 11
+strengthLabel.ZIndex = 11
+
+-- Status Silent Aim
+local silentStatusLabel = Instance.new("TextLabel", frame)
+silentStatusLabel.Size = UDim2.new(0.9, 0, 0, 18)
+silentStatusLabel.Position = UDim2.new(0.05, 0, 0, 302)
+silentStatusLabel.Text = "Silent: redirige les balles"
+silentStatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+silentStatusLabel.BackgroundTransparency = 1
+silentStatusLabel.Font = Enum.Font.Gotham
+silentStatusLabel.TextSize = 9
+silentStatusLabel.ZIndex = 11
+
+local infoLabel = Instance.new("TextLabel", frame)
+infoLabel.Size = UDim2.new(0.9, 0, 0, 18)
+infoLabel.Position = UDim2.new(0.05, 0, 0, 322)
+infoLabel.Text = "Glisser la barre = déplacer"
+infoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+infoLabel.BackgroundTransparency = 1
+infoLabel.Font = Enum.Font.Gotham
+infoLabel.TextSize = 9
+infoLabel.ZIndex = 11
+
+-- =====================
+-- CERCLE FOV
+-- =====================
+local circle = Instance.new("Frame", gui)
+circle.Name = "FOVCircle"
+circle.AnchorPoint = Vector2.new(0.5, 0.5)
+circle.Size = UDim2.new(0, FOV * 2, 0, FOV * 2)
+circle.BackgroundTransparency = 1
+circle.ZIndex = 1
+
+local circleInner = Instance.new("Frame", circle)
+circleInner.Size = UDim2.new(1, 0, 1, 0)
+circleInner.BackgroundTransparency = 0.85
+circleInner.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+circleInner.BorderSizePixel = 0
+circleInner.ZIndex = 1
+
+Instance.new("UICorner", circleInner).CornerRadius = UDim.new(0.5, 0)
+
+local circleStroke = Instance.new("UIStroke", circleInner)
+circleStroke.Color = Color3.fromRGB(255, 0, 0)
+circleStroke.Thickness = 2
+circleStroke.Transparency = 0.3
+
+local centerDot = Instance.new("Frame", gui)
+centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
+centerDot.Size = UDim2.new(0, 6, 0, 6)
+centerDot.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+centerDot.ZIndex = 2
+Instance.new("UICorner", centerDot).CornerRadius = UDim.new(0.5, 0)
+
+-- =====================
+-- INDICATEUR MODE DÉPLACEMENT
+-- =====================
+local moveIndicator = Instance.new("TextLabel", gui)
+moveIndicator.Size = UDim2.new(0, 250, 0, 35)
+moveIndicator.Position = UDim2.new(0.5, -125, 0, 10)
+moveIndicator.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+moveIndicator.BackgroundTransparency = 0.2
+moveIndicator.Text = "👆 TOUCHE POUR PLACER LA FOV"
+moveIndicator.TextColor3 = Color3.new(1, 1, 1)
+moveIndicator.Font = Enum.Font.GothamBold
+moveIndicator.TextSize = 11
+moveIndicator.ZIndex = 20
+moveIndicator.Visible = false
+Instance.new("UICorner", moveIndicator).CornerRadius = UDim.new(0, 8)
+
+-- =====================
+-- DRAG MENU AMÉLIORÉ (système offset + container)
+-- =====================
+local dragging = false
+local dragOffset = Vector2.new(0, 0)
+local hasDragged = false
+local DRAG_THRESHOLD = 5
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        hasDragged = false
+        -- Calcul de l'offset entre le doigt/souris et le coin du container
+        local mousePos = input.Position
+        local containerPos = container.AbsolutePosition
+        dragOffset = Vector2.new(mousePos.X - containerPos.X, mousePos.Y - containerPos.Y)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local mousePos = input.Position
+        local newX = mousePos.X - dragOffset.X
+        local newY = mousePos.Y - dragOffset.Y
+
+        -- Vérifie si on a assez bougé pour considérer un drag
+        local currentPos = container.AbsolutePosition
+        local delta = Vector2.new(newX - currentPos.X, newY - currentPos.Y)
+
+        if not hasDragged and delta.Magnitude >= DRAG_THRESHOLD then
+            hasDragged = true
+            titleBar.BackgroundTransparency = 0.1
+        end
+
+        if hasDragged then
+            -- Clamp pour garder le menu dans l'écran
+            local viewportSize = Camera.ViewportSize
+            local containerWidth = container.AbsoluteSize.X
+            local containerHeight = container.AbsoluteSize.Y
+
+            newX = math.clamp(newX, 0, viewportSize.X - containerWidth)
+            newY = math.clamp(newY, 0, viewportSize.Y - 30)
+
+            container.Position = UDim2.new(0, newX, 0, newY)
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if dragging then
+            dragging = false
+            titleBar.BackgroundTransparency = 0.3
+
+            -- Si on n'a PAS bougé → toggle ouverture/fermeture
+            if not hasDragged then
+                frame.Visible = not frame.Visible
+
+                if frame.Visible then
+                    titleBar.Text = "▼ Salim Cheat 2.67"
+                    container.Size = UDim2.new(0, 160, 0, 390)
+                    titleBar.Position = UDim2.new(0, 0, 1, -30)
+                else
+                    titleBar.Text = "▲ Salim Cheat 2.67"
+                    container.Size = UDim2.new(0, 160, 0, 30)
+                    titleBar.Position = UDim2.new(0, 0, 0, 0)
+                end
+            end
+
+            hasDragged = false
+        end
+    end
+end)
+
+-- =====================
+-- DRAG FOV
+-- =====================
+local fovDragging = false
+
+local function isPointInGui(point, guiObject)
+    local pos = guiObject.AbsolutePosition
+    local size = guiObject.AbsoluteSize
+    return point.X >= pos.X and point.X <= pos.X + size.X
+        and point.Y >= pos.Y and point.Y <= pos.Y + size.Y
+end
+
+UserInputService.InputBegan:Connect(function(input)
+    if not fovLocked and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
+        local touchPos = input.Position
+
+        -- Vérifie qu'on ne touche pas le menu (container unique)
+        local onContainer = isPointInGui(touchPos, container)
+
+        if not onContainer then
+            fovDragging = true
+            customFovX = touchPos.X
+            customFovY = touchPos.Y
+            circle.Position = UDim2.new(0, customFovX, 0, customFovY)
+            centerDot.Position = UDim2.new(0, customFovX, 0, customFovY)
+        end
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if fovDragging and not fovLocked and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+        customFovX = input.Position.X
+        customFovY = input.Position.Y
+        circle.Position = UDim2.new(0, customFovX, 0, customFovY)
+        centerDot.Position = UDim2.new(0, customFovX, 0, customFovY)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if fovDragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
+        fovDragging = false
+    end
+end)
+
+-- =====================
+-- ESP
+-- =====================
+local function createESP(player)
+    if player == LocalPlayer then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+
+    local nameTag = Instance.new("BillboardGui")
+    nameTag.Size = UDim2.new(0, 100, 0, 40)
+    nameTag.StudsOffset = Vector3.new(0, 3, 0)
+    nameTag.AlwaysOnTop = true
+
+    local nameLabel = Instance.new("TextLabel", nameTag)
+    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 14
+    nameLabel.Text = player.Name
+
+    local healthLabel = Instance.new("TextLabel", nameTag)
+    healthLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    healthLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    healthLabel.TextStrokeTransparency = 0.5
+    healthLabel.Font = Enum.Font.Gotham
+    healthLabel.TextSize = 12
+
+    espObjects[player] = {
+        highlight = highlight,
+        nameTag = nameTag,
+        healthLabel = healthLabel
+    }
+
+    local function updateESP()
+        if player.Character and espEnabled then
+            highlight.Parent = player.Character
+            nameTag.Parent = player.Character:FindFirstChild("Head")
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                local health = math.floor(humanoid.Health)
+                local maxHealth = humanoid.MaxHealth
+                healthLabel.Text = health .. "/" .. maxHealth
+                local ratio = health / maxHealth
+                healthLabel.TextColor3 = Color3.fromRGB(255 * (1 - ratio), 255 * ratio, 0)
+            end
+        else
+            highlight.Parent = nil
+            nameTag.Parent = nil
+        end
+    end
+
+    player.CharacterAdded:Connect(function()
+        task.wait(0.5)
+        updateESP()
+    end)
+
+    updateESP()
+end
+
+local function removeESP(player)
+    if espObjects[player] then
+        espObjects[player].highlight:Destroy()
+        espObjects[player].nameTag:Destroy()
+        espObjects[player] = nil
+    end
+end
+
+-- =====================
+-- TRACERS
+-- =====================
+local function createTracer(player)
+    if player == LocalPlayer then return end
+
+    local line = Drawing.new("Line")
+    line.Visible = false
+    line.Color = Color3.fromRGB(255, 0, 0)
+    line.Thickness = 1
+    line.Transparency = 1
+
+    tracerLines[player] = line
+end
+
+local function removeTracer(player)
+    if tracerLines[player] then
+        tracerLines[player]:Remove()
+        tracerLines[player] = nil
+    end
+end
+
+for _, player in pairs(Players:GetPlayers()) do
+    createESP(player)
+    createTracer(player)
+end
+
+Players.PlayerAdded:Connect(function(player)
+    createESP(player)
+    createTracer(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player)
+    removeTracer(player)
+end)
+
+-- =====================
+-- GET CLOSEST PLAYER
+-- =====================
+local function getClosestPlayer()
+    local closest = nil
+    local shortest = FOV
+
+    local fovCenterX, fovCenterY
+    if customFovX and customFovY then
+        local guiInset = GuiService:GetGuiInset()
+        fovCenterX = customFovX
+        fovCenterY = customFovY - guiInset.Y
+    else
+        local viewportSize = Camera.ViewportSize
+        fovCenterX = viewportSize.X / 2
+        fovCenterY = viewportSize.Y / 2
+    end
+
+    local screenCenter = Vector2.new(fovCenterX, fovCenterY)
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local head = player.Character:FindFirstChild("Head")
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+
+            if head and humanoid and humanoid.Health > 0 then
+                local pos, visible = Camera:WorldToViewportPoint(head.Position)
+
+                if visible then
+                    local screenPos = Vector2.new(pos.X, pos.Y)
+                    local dist = (screenPos - screenCenter).Magnitude
+
+                    if dist < shortest then
+                        shortest = dist
+                        closest = player
+                    end
+                end
+            end
+        end
+    end
+
+    return closest, shortest
+end
+
+-- =====================
+-- SILENT AIM - HOOK
+-- =====================
+local silentAimTarget = nil
+
+-- Hook les Remote Events pour rediriger les balles
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+    local args = {...}
+    local method = getnamecallmethod()
+
+    if silentAim and silentAimTarget then
+        local targetHead = nil
+
+        if silentAimTarget.Character then
+            targetHead = silentAimTarget.Character:FindFirstChild("Head")
+        end
+
+        if targetHead then
+            if method == "FireServer" or method == "InvokeServer" then
+                for i, v in pairs(args) do
+                    -- Remplacer les positions de souris/caméra par la tête de la cible
+                    if typeof(v) == "Vector3" then
+                        args[i] = targetHead.Position
+                    elseif typeof(v) == "CFrame" then
+                        args[i] = CFrame.new(v.Position, targetHead.Position)
+                    elseif typeof(v) == "RaycastResult" then
+                        -- Certains jeux envoient le RaycastResult
+                    end
+                end
+                return oldNamecall(self, unpack(args))
+            end
+        end
+    end
+
+    return oldNamecall(self, ...)
+end))
+
+-- Hook Mouse.Hit pour les jeux qui utilisent mouse.Hit
+local oldIndex
+oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
+    if silentAim and silentAimTarget then
+        local targetHead = nil
+        if silentAimTarget.Character then
+            targetHead = silentAimTarget.Character:FindFirstChild("Head")
+        end
+
+        if targetHead then
+            if self == Mouse then
+                if key == "Hit" then
+                    return CFrame.new(targetHead.Position)
+                elseif key == "Target" then
+                    return targetHead
+                elseif key == "X" then
+                    local pos = Camera:WorldToViewportPoint(targetHead.Position)
+                    return pos.X
+                elseif key == "Y" then
+                    local pos = Camera:WorldToViewportPoint(targetHead.Position)
+                    return pos.Y
+                elseif key == "UnitRay" then
+                    local origin = Camera.CFrame.Position
+                    local direction = (targetHead.Position - origin).Unit
+                    return Ray.new(origin, direction)
+                end
+            end
+
+            -- Hook Camera:WorldToScreenPoint et ViewportPoint pour certains jeux
+            if self == Camera then
+                if key == "CFrame" and false then
+                    -- On ne hook pas le CFrame de la caméra pour garder la vue normale
+                end
+            end
+        end
+    end
+
+    return oldIndex(self, key)
+end))
+
+-- =====================
+-- BOUTONS EVENTS
+-- =====================
+aimButton.MouseButton1Click:Connect(function()
+    aimAssist = not aimAssist
+    if aimAssist then silentAim = false end -- Désactiver silent si aim assist activé
+    aimButton.Text = "Aim Assist : " .. (aimAssist and "ON" or "OFF")
+    aimButton.BackgroundColor3 = aimAssist and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+    -- Update silent aim button
+    silentAimButton.Text = "Silent Aim : " .. (silentAim and "ON" or "OFF")
+    silentAimButton.BackgroundColor3 = silentAim and Color3.fromRGB(170, 0, 255) or Color3.fromRGB(60, 60, 60)
+end)
+
+silentAimButton.MouseButton1Click:Connect(function()
+    silentAim = not silentAim
+    if silentAim then aimAssist = false end -- Désactiver aim assist si silent activé
+    silentAimButton.Text = "Silent Aim : " .. (silentAim and "ON" or "OFF")
+    silentAimButton.BackgroundColor3 = silentAim and Color3.fromRGB(170, 0, 255) or Color3.fromRGB(60, 60, 60)
+    -- Update aim assist button
+    aimButton.Text = "Aim Assist : " .. (aimAssist and "ON" or "OFF")
+    aimButton.BackgroundColor3 = aimAssist and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+
+    if silentAim then
+        -- Changer le cercle en violet pour indiquer silent aim
+        circleInner.BackgroundColor3 = Color3.fromRGB(170, 0, 255)
+        circleStroke.Color = Color3.fromRGB(170, 0, 255)
+        centerDot.BackgroundColor3 = Color3.fromRGB(170, 0, 255)
+    elseif not fovLocked then
+        circleInner.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+        circleStroke.Color = Color3.fromRGB(255, 165, 0)
+        centerDot.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+    else
+        circleInner.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        circleStroke.Color = Color3.fromRGB(255, 0, 0)
+        centerDot.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    end
+end)
+
+fovButton.MouseButton1Click:Connect(function()
+    showFOV = not showFOV
+    fovButton.Text = "FOV Visible : " .. (showFOV and "ON" or "OFF")
+    circle.Visible = showFOV
+    centerDot.Visible = showFOV
+    fovButton.BackgroundColor3 = showFOV and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+end)
+
+espButton.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    espButton.Text = "ESP : " .. (espEnabled and "ON" or "OFF")
+    espButton.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and espObjects[player] then
+            if espEnabled and player.Character then
+                espObjects[player].highlight.Parent = player.Character
+                espObjects[player].nameTag.Parent = player.Character:FindFirstChild("Head")
+            else
+                espObjects[player].highlight.Parent = nil
+                espObjects[player].nameTag.Parent = nil
+            end
+        end
+    end
+end)
+
+tracerButton.MouseButton1Click:Connect(function()
+    tracersEnabled = not tracersEnabled
+    tracerButton.Text = "Tracers : " .. (tracersEnabled and "ON" or "OFF")
+    tracerButton.BackgroundColor3 = tracersEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+
+    if not tracersEnabled then
+        for _, line in pairs(tracerLines) do
+            line.Visible = false
+        end
+    end
+end)
+
+fovBox.FocusLost:Connect(function()
+    local num = tonumber(fovBox.Text)
+    if num and num > 0 and num <= 500 then
+        FOV = num
+        circle.Size = UDim2.new(0, FOV * 2, 0, FOV * 2)
+        fovBox.PlaceholderText = "FOV: " .. FOV
+    end
+    fovBox.Text = ""
+end)
+
+moveFovButton.MouseButton1Click:Connect(function()
+    fovLocked = not fovLocked
+
+    if fovLocked then
+        moveFovButton.Text = "🔓 Déplacer FOV"
+        moveFovButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        moveIndicator.Visible = false
+        if silentAim then
+            circleInner.BackgroundColor3 = Color3.fromRGB(170, 0, 255)
+            circleStroke.Color = Color3.fromRGB(170, 0, 255)
+            centerDot.BackgroundColor3 = Color3.fromRGB(170, 0, 255)
+        else
+            circleInner.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+            circleStroke.Color = Color3.fromRGB(255, 0, 0)
+            centerDot.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        end
+    else
+        moveFovButton.Text = "🔒 Verrouiller FOV"
+        moveFovButton.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+        moveIndicator.Visible = true
+        circleInner.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+        circleStroke.Color = Color3.fromRGB(255, 165, 0)
+        centerDot.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+    end
+end)
+
+resetFovButton.MouseButton1Click:Connect(function()
+    customFovX = nil
+    customFovY = nil
+    local cx, cy = getGameCenter()
+    circle.Position = UDim2.new(0, cx, 0, cy)
+    centerDot.Position = UDim2.new(0, cx, 0, cy)
+end)
+
+-- =====================
+-- MAIN LOOP
+-- =====================
+RunService.RenderStepped:Connect(function()
+    if not customFovX or not customFovY then
+        local cx, cy = getGameCenter()
+        circle.Position = UDim2.new(0, cx, 0, cy)
+        centerDot.Position = UDim2.new(0, cx, 0, cy)
+    end
+
+    -- Toujours mettre à jour la cible pour le silent aim
+    local target, distance = getClosestPlayer()
+    silentAimTarget = target
+
+    -- Aim Assist (bouge la caméra)
+    if aimAssist then
+        if target and target.Character then
+            local head = target.Character:FindFirstChild("Head")
+
+            if head then
+                local targetPos = head.Position
+                local currentPos = Camera.CFrame.Position
+                local newCFrame = CFrame.new(currentPos, targetPos)
+                Camera.CFrame = Camera.CFrame:Lerp(newCFrame, aimStrength)
+            end
+        end
+    end
+
+    -- Update status label
+    if silentAim and silentAimTarget then
+        silentStatusLabel.Text = "🎯 Cible: " .. silentAimTarget.Name
+        silentStatusLabel.TextColor3 = Color3.fromRGB(170, 0, 255)
+    elseif silentAim then
+        silentStatusLabel.Text = "Silent: aucune cible"
+        silentStatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    else
+        silentStatusLabel.Text = "Silent: redirige les balles"
+        silentStatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    end
+
+    -- Tracers
+    if tracersEnabled then
+        local screenBottom = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+
+        for player, line in pairs(tracerLines) do
+            if player.Character then
+                local root = player.Character:FindFirstChild("HumanoidRootPart")
+                local humanoid = player.Character:FindFirstChild("Humanoid")
+
+                if root and humanoid and humanoid.Health > 0 then
+                    local pos, visible = Camera:WorldToViewportPoint(root.Position)
+
+                    if visible then
+                        line.From = screenBottom
+                        line.To = Vector2.new(pos.X, pos.Y)
+                        line.Visible = true
+                    else
+                        line.Visible = false
+                    end
+                else
+                    line.Visible = false
+                end
+            else
+                line.Visible = false
+            end
+        end
+    end
+
+    -- ESP
+    if espEnabled then
+        for player, esp in pairs(espObjects) do
+            if player.Character then
+                local humanoid = player.Character:FindFirstChild("Humanoid")
+                if humanoid then
+                    local health = math.floor(humanoid.Health)
+                    local maxHealth = humanoid.MaxHealth
+                    esp.healthLabel.Text = health .. "/" .. maxHealth
+                    local ratio = health / maxHealth
+                    esp.healthLabel.TextColor3 = Color3.fromRGB(255 * (1 - ratio), 255 * ratio, 0)
+                end
+            end
+        end
+    end
+end)
